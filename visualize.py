@@ -38,16 +38,33 @@ def mesh(mesh, **kwargs):
     return triangular_mesh(mesh[0], mesh[1], **kwargs)
 
 
+def line(a, b, colors=None):
+    a = np.array(a) * np.ones(1)
+    b = np.array(b) * np.ones(1)
+
+    if colors is None:
+        colors = [(1.0, 1.0, 1.0)] * len(a)
+
+    for n, (start, end) in enumerate(zip(a, b)):
+        mlab.plot3d(
+            [start[0], end[0]],
+            [start[1], end[1]],
+            [start[2], end[2]],
+            color=tuple(colors[n])
+        )
+
+
 def color_points3d(x, scalars, **kwargs):
     nodes = points3d(x, **kwargs)
     nodes.glyph.scale_mode = 'scale_by_vector'
-    # nodes.mlab_source.dataset.point_data.vectors = np.tile(np.random.random((5000,)), (3, 1))
     if 'scale_factor' in kwargs.keys():
         nodes.mlab_source.dataset.point_data.vectors = np.ones(x.shape) * kwargs['scale_factor']
     nodes.mlab_source.dataset.point_data.scalars = scalars
     return nodes
 
 
-def show():
+def show(axis_scale=1.0):
     """So you don't have to import mlab."""
+    diag = np.diag([1.0, 1.0, 1.0])
+    line(np.zeros((3, 3)), diag * axis_scale, colors=diag)
     mlab.show()

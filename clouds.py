@@ -17,6 +17,10 @@ import visualize
 
 
 def uniform_voxelgrid_sample(points, voxel_size=1.0):
+    """Downsample a point cloud using a grid of uniformly sized voxels
+
+    Each voxel - if it contains any points - will become the mean of those points
+    """
     _min = np.min(points, axis=0)
     _max = np.max(points, axis=0)
 
@@ -50,7 +54,7 @@ def uniform_voxelgrid_sample(points, voxel_size=1.0):
 
 
 def robust_normals(points, leaf_size=0.05, outlier_angle=0.1):
-    """TODO"""
+    """TODO: Try distance upper bound in kdtree"""
     tic = time.time()
     # need copy?
     kdtree = cKDTree(np.copy(points))

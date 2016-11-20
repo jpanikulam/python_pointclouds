@@ -135,7 +135,19 @@ def show_spinimage(image):
     plt.show()
 
 
+def test_half_mesh(mesh):
+    (vertices, faces, normals, _) = mesh
+    allowed = vertices[:, 2] > 0.0
+    # allowed_faces = faces[not np.any()]
+    return vertices[allowed], normals[allowed]
+
+
 if __name__ == '__main__':
+    """TODO:
+    - register clouds
+        - huber/tukey
+    - icp
+    """
     import clouds
     mesh = load.load_mesh('Y3043_Finch.obj')
 
@@ -147,12 +159,13 @@ if __name__ == '__main__':
     # leaf = 0.05
     # downsampled_intf = clouds.uniform_voxelgrid_sample(intf, voxel_size=leaf * 0.5)
     # normal_pts, normals = clouds.robust_normals(downsampled_intf, leaf_size=leaf)
+
+    vertices, normals = test_half_mesh(mesh)
     normal_pts = vertices
-    normals = mesh[2]
 
     # Build spinimages
     tic = time.time()
-    spin_images = build_spinimages(vertices, normal_pts, normals, scale=0.2)
+    spin_images = build_spinimages(vertices, normal_pts, normals, scale=0.5)
     toc = time.time() - tic
     print 'Spin image library construction took {} seconds'.format(toc)
 
@@ -171,4 +184,4 @@ if __name__ == '__main__':
     visualize.color_points3d(normal_pts, similarity, scale_factor=0.1)
     visualize.points3d(normal_pts[n], scale_factor=0.05, opacity=0.7)
 
-    visualize.show()
+    visualize.show(axis_scale=0.2)
