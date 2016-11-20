@@ -9,13 +9,11 @@ TODO: voxel downsampling
 
 import time
 import numpy as np
-import geometry
 # holy shit always use cKDtree...
 from scipy.spatial import cKDTree
 import scipy.linalg as scl
 
 import visualize
-import load
 
 
 def uniform_voxelgrid_sample(points, voxel_size=1.0):
@@ -60,7 +58,7 @@ def robust_normals(points, leaf_size=0.05, outlier_angle=0.1):
     print "KDtree build took", toc
 
     tic = time.time()
-    # point_clusters = kdtree.query_ball_point(points, leaf_size)
+    # Note: Each query includes itself!
     distances, point_clusters = kdtree.query(points, 3)
 
     toc = time.time() - tic
@@ -74,11 +72,6 @@ def robust_normals(points, leaf_size=0.05, outlier_angle=0.1):
     }
 
     for n, group in enumerate(point_clusters):
-        if len(group) < 3:
-            # Group was degenerate
-            results['degenerate'].append(n)
-            continue
-
         distance = distances[n]
         if np.std(distance) > 0.07:
             # To dispersed
@@ -88,19 +81,16 @@ def robust_normals(points, leaf_size=0.05, outlier_angle=0.1):
         cov = np.cov(group_pts.transpose())
 
         # Get the smallest eigen vector (the local plane normal)
-        vals, eigen_vectors = scl.eigh(cov, eigvals=(0, 0))
+        _, eigen_vectors = scl.eigh(cov, eigvals=(0, 0))
         results['normals'].append(eigen_vectors.transpose())
         results['good_points'].append(points[n])
 
     normals = np.vstack(results['normals'])
     good_points = np.vstack(results['good_points'])
 
-    visualize.points3d(points[results['degenerate']], scale_factor=0.01)
-    visualize.quiver3d(good_points, normals)
-
     toc = time.time() - tic
     print "Normal build took", toc
-    visualize.show()
+    return good_points, normals
 
 
 def compute_normals(points, leaf_size=0.05):
@@ -164,26 +154,3 @@ def compute_normals(points, leaf_size=0.05):
     print "Assembling normals took", toc
     visualize.quiver3d(good_points, normals)
     return good_points, normals
-
-if __name__ == '__main__':
-    import os
-    this_path = os.path.dirname(os.path.realpath(__file__))
-    # mesh = load.load_mesh(load.catalog['stealth'])
-    # mesh = load.load_mesh(os.path.join(this_path, 'meshes', Y3043_Finch.obj))
-    mesh = load.load_mesh('Y3043_Finch.obj')
-
-    vertices = mesh[0]
-    faces = mesh[1]
-
-    intf = geometry.interpolate_faces(vertices, faces, amt=5)
-
-    leaf = 0.05
-    downsampled_intf = uniform_voxelgrid_sample(intf, voxel_size=leaf * 0.5)
-    # normal_pts, normals = compute_normals(downsampled_intf, leaf_size=leaf)
-    robust_normals(downsampled_intf, leaf_size=leaf)
-
-    # robust_normals(intf, leaf_size=0.01)
-    # visualize.mesh(mesh)
-    # visualize.points3d(mesh[0], scale_factor=0.01)
-    # visualize.points3d(intf, scale_factor=0.01, color=(0.0, 1.0, 0.0))
-    visualize.show()

@@ -1,12 +1,10 @@
 import numpy as np
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
 # from mpl_toolkits.mplot3d import Axes3D  # noqa
 import cv2
-from mayavi import mlab
 import load
 import time
 
-# pcl
 import visualize
 import geometry
 
@@ -46,7 +44,7 @@ def analyze_spins(vertices, faces, intf):
 
             visualize.points3d(np.reshape(vn[k], (1, -1)), scale_factor=2.0, color=(0.0, 1.0, 1.0))
             visualize.points3d(np.reshape(vn[n], (1, -1)), scale_factor=2.0, color=(0.0, 0.0, np.clip(corr, 0.0, 1.0)))
-            mlab.show()
+
 
 def render_points(points, scale, width):
     """Assuming 2d points.
@@ -80,35 +78,12 @@ def render_points(points, scale, width):
     np.add.at(image, (indices[:, 0], indices[:, 1]), 1)
     return image
 
-    # plt.figure(3)
-    # plt.imshow(image)
-    # plt.show()
 
-
-def rpq(im1, im2):
-    """Linear correlation of two images."""
-    p = np.squeeze(np.reshape(im1, (-1, 1))) / np.max(im1)
-    q = np.squeeze(np.reshape(im2, (-1, 1))) / np.max(im2)
-    # import IPython; IPython.embed()
-
-    N = 10 * 25
-    qsum = np.sum(q)
-
-    correlation = (N * np.dot(p, q)) - (np.sum(p) * np.sum(q))
-    # print correlation
-
-    p_normalizer = (N * np.sum(np.square(p))) - np.square(np.sum(p))
-    q_normalizer = (N * np.sum(np.square(q))) - np.square(np.sum(q))
-
-    normalization = np.sqrt(p_normalizer * q_normalizer)
-    # print normalization, p_normalizer, q_normalizer
-    return correlation / normalization
-
-
-def spin(vertices, point, direction):
+def spin(vertices, point, direction, scale=25):
     """Cylindrical deprojection about a point and normal.
 
     TODO: occlusion
+    TODO: maximum support angle
     """
     difference = (vertices - point).transpose()
     xmp = np.linalg.norm(vertices - point, axis=1) ** 2
@@ -120,16 +95,80 @@ def spin(vertices, point, direction):
         print 'Encountered invalid vertex in spinimage.'
         xmp_m_proj[xmp_m_proj < 0] = 0
 
-    alpha = np.sqrt(xmp - projection)
+    alpha = np.sqrt(xmp_m_proj)
     beta = direction.dot(difference)
 
     spin_points = np.vstack((alpha, beta)).transpose()
-    spin_image = render_points(spin_points, 25, 10)
+    spin_image = render_points(spin_points, scale, 10)
     return spin_image
 
+
+def rpq(im1, im2):
+    """Linear correlation of two images."""
+    p = np.squeeze(np.reshape(im1, (-1, 1)))
+    q = np.squeeze(np.reshape(im2, (-1, 1)))
+
+    N = p.size
+
+    qsum = np.sum(q)
+    psum = np.sum(p)
+
+    correlation = (N * np.dot(p, q)) - (psum * qsum)
+
+    p_normalizer = (N * np.sum(np.square(p))) - np.square(psum)
+    q_normalizer = (N * np.sum(np.square(q))) - np.square(qsum)
+
+    normalization = np.sqrt(p_normalizer * q_normalizer)
+    return correlation / normalization
+
+
+def build_spinimages(vertices, normal_vertices, normals, scale=25):
+    images = []
+    for n in range(normal_vertices.shape[0]):
+        image = spin(vertices, normal_vertices[n], normals[n], scale=scale)
+        images.append(image)
+    return images
+
+
+def show_spinimage(image):
+    plt.imshow(image)
+    plt.show()
+
+
 if __name__ == '__main__':
-    mesh = load.load_mesh(load.catalog['stealth'])
+    import clouds
+    mesh = load.load_mesh('Y3043_Finch.obj')
 
     vertices = mesh[0]
+    faces = mesh[1]
 
-    upsample_mesh(mesh)
+    # Generate trainable data from a model
+    # intf = geometry.interpolate_faces(vertices, faces, amt=5)
+    # leaf = 0.05
+    # downsampled_intf = clouds.uniform_voxelgrid_sample(intf, voxel_size=leaf * 0.5)
+    # normal_pts, normals = clouds.robust_normals(downsampled_intf, leaf_size=leaf)
+    normal_pts = vertices
+    normals = mesh[2]
+
+    # Build spinimages
+    tic = time.time()
+    spin_images = build_spinimages(vertices, normal_pts, normals, scale=0.2)
+    toc = time.time() - tic
+    print 'Spin image library construction took {} seconds'.format(toc)
+
+    # Choose a test image
+    # test_spin = spin(intf, normal_pts[0], normals[0])
+    n = np.random.randint(len(spin_images))
+    test_spin = spin_images[n]
+
+    tic = time.time()
+    similarity = np.array(map(lambda q: rpq(test_spin, q), spin_images))
+    toc = time.time() - tic
+    print 'Similarity estimation took {} seconds'.format(toc)
+    print np.min(similarity), np.max(similarity)
+    similarity = np.clip(similarity, 0.0, 1.0)
+
+    visualize.color_points3d(normal_pts, similarity, scale_factor=0.1)
+    visualize.points3d(normal_pts[n], scale_factor=0.05, opacity=0.7)
+
+    visualize.show()
