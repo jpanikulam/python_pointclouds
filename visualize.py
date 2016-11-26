@@ -1,6 +1,11 @@
 from mayavi import mlab
 import numpy as np
 
+import vtk
+output = vtk.vtkFileOutputWindow()
+output.SetFileName("/dev/null")
+vtk.vtkOutputWindow().SetInstance(output)
+
 
 def quiver3d(x, n, **kwargs):
     return mlab.quiver3d(
@@ -61,6 +66,11 @@ def color_points3d(x, scalars, **kwargs):
         nodes.mlab_source.dataset.point_data.vectors = np.ones(x.shape) * kwargs['scale_factor']
     nodes.mlab_source.dataset.point_data.scalars = scalars
     return nodes
+
+
+def update(mlab_widget, x, **kwargs):
+    m_source = mlab_widget.mlab_source
+    m_source.set(x=x[:, 0], y=x[:, 1], z=x[:, 2], **kwargs)
 
 
 def show(axis_scale=1.0):

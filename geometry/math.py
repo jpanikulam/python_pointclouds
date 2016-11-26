@@ -7,6 +7,7 @@ import numpy as np
 
 
 def huber(x, delta):
+    """Compute huber robust loss function."""
     results = np.zeros(x.shape)
     abs_x = np.fabs(x)
 
@@ -18,6 +19,7 @@ def huber(x, delta):
 
 
 def dhuber(x, delta):
+    """Compute dhuber/dx."""
     results = np.zeros(x.shape)
     abs_x = np.fabs(x)
 
@@ -29,6 +31,7 @@ def dhuber(x, delta):
 
 
 def tukey(x, c):
+    """Compute tukey robust loss function."""
     results = np.zeros(x.shape)
     abs_x = np.fabs(x)
 
@@ -43,6 +46,7 @@ def tukey(x, c):
 
 
 def dtukey(x, c):
+    """Compute dtufkey/dx."""
     results = np.zeros(x.shape)
     abs_x = np.fabs(x)
 
@@ -54,13 +58,19 @@ def dtukey(x, c):
     return results
 
 
+def square(x):
+    return
+
+
+def gauss_newton(error):
+    assert loss in ['tukey', 'huber', 'square']
+
+
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
     r = np.linspace(-10, 10, 1000)
     plt.plot(r, huber(r, 1.0), 'g')
     plt.plot(r, dhuber(r, 1.0), 'g--')
-
     plt.plot(r, tukey(r, 1.0), 'r')
     plt.plot(r, dtukey(r, 1.0), 'r--')
-
     plt.show()

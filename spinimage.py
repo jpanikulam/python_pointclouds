@@ -18,34 +18,6 @@ def upsample_mesh(mesh):
     return intf
 
 
-def analyze_spins(vertices, faces, intf):
-    # cv2.imshow('z', cv2.resize(spin_image / np.max(spin_image), (500, 500)))
-    # cv2.waitKey(500)
-    spins = []
-    vn = []
-    # for n, face in enumerate(faces):
-    #     vertex = vertices[face[0]]
-    #     normal = face_normals[n]
-    #     spin_image = spin(intf, vertex, normal)
-    #     vn.append(vertex)
-    #     spins.append(spin_image)
-
-    first_spin = spin(intf, vertex, normal)
-
-    # visualize.quiver3d(face_centroids, -face_normals)
-    for n, _ in enumerate(spins):
-        # for k, _ in enumerate(spins):
-        k = 0
-        corr = rpq(spins[n], spins[k])
-        print "{}: {}".format(n, k), corr
-        if corr > 0.8:
-            visualize.points3d(intf, scale_factor=0.6, color=(1.0, 0.0, 0.0))
-            visualize.triangular_mesh(vertices, faces)
-
-            visualize.points3d(np.reshape(vn[k], (1, -1)), scale_factor=2.0, color=(0.0, 1.0, 1.0))
-            visualize.points3d(np.reshape(vn[n], (1, -1)), scale_factor=2.0, color=(0.0, 0.0, np.clip(corr, 0.0, 1.0)))
-
-
 def render_points(points, scale, width):
     """Assuming 2d points.
 
@@ -145,7 +117,6 @@ def test_half_mesh(mesh):
 if __name__ == '__main__':
     """TODO:
     - register clouds
-        - huber/tukey
     - icp
     """
     import clouds
@@ -165,23 +136,24 @@ if __name__ == '__main__':
 
     # Build spinimages
     tic = time.time()
-    spin_images = build_spinimages(vertices, normal_pts, normals, scale=0.5)
+    spin_images = build_spinimages(vertices, normal_pts, normals, scale=1.0)
     toc = time.time() - tic
     print 'Spin image library construction took {} seconds'.format(toc)
 
     # Choose a test image
     # test_spin = spin(intf, normal_pts[0], normals[0])
-    n = np.random.randint(len(spin_images))
-    test_spin = spin_images[n]
+    for k in range(20):
+        n = np.random.randint(len(spin_images))
+        test_spin = spin_images[n]
 
-    tic = time.time()
-    similarity = np.array(map(lambda q: rpq(test_spin, q), spin_images))
-    toc = time.time() - tic
-    print 'Similarity estimation took {} seconds'.format(toc)
-    print np.min(similarity), np.max(similarity)
-    similarity = np.clip(similarity, 0.0, 1.0)
+        tic = time.time()
+        similarity = np.array(map(lambda q: rpq(test_spin, q), spin_images))
+        toc = time.time() - tic
+        print 'Similarity estimation took {} seconds'.format(toc)
+        print np.min(similarity), np.max(similarity)
+        similarity = np.clip(similarity, 0.0, 1.0)
 
-    visualize.color_points3d(normal_pts, similarity, scale_factor=0.1)
-    visualize.points3d(normal_pts[n], scale_factor=0.05, opacity=0.7)
+        visualize.color_points3d(normal_pts, similarity, scale_factor=0.1)
+        visualize.points3d(normal_pts[n], scale_factor=0.05, opacity=0.7)
 
-    visualize.show(axis_scale=0.2)
+        visualize.show(axis_scale=0.2)
